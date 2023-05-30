@@ -48,34 +48,30 @@ fn validateBitMask(mask: i16) cand_state {
 /// Returns: The value equivalent to the bitmask, or -1 if the mask is invalid or has several values.
 fn convertBitMaskToValue(mask: i16) i16 {
     return switch (validateBitMask(mask)) {
-        cand_state.several_candidates, cand_state.invalid => -1,
         cand_state.no_candidates => 0,
         cand_state.one_candidate => @ctz(mask) + 1,
+        else => -1,
     };
 }
 
 /// A function to convert a value to a bitmask.
 /// - `val`: The value to convert.
 /// Returns: The bitmask equivalent to the value.
-fn convertValueToBitMask(val: i16) i16 {
-    var mask: i16 = @enumToInt(cell_values.invalid);
-
-    if (val == 0) {
-        mask = 0;
-    } else if ((val > 0) and (val <= 9)) {
-        mask = std.math.shl(i16, 1, @intCast(u5, val) - 1);
-    }
-
-    return mask;
+fn convertValueToBitMask(val: i16) cell_values {
+    return switch (val) {
+        0 => cell_values.no_value,
+        1, 2, 3, 4, 5, 6, 7, 8, 9 => @intToEnum(cell_values, std.math.shl(i16, 1, @intCast(u5, val) - 1)),
+        else => cell_values.invalid,
+    };
 }
 
 /// A structure to represent a cell in the Sudoku puzzle.
 const cell = struct {
-    value: i16,
+    value: cell_values,
     cand: i16,
 
     fn init() cell {
-        var c: cell = .{ .value = @enumToInt(cell_values.no_value), .cand = @enumToInt(cell_values.value_mask) };
+        var c: cell = .{ .value = cell_values.no_value, .cand = @enumToInt(cell_values.value_mask) };
         return c;
     }
 
@@ -83,11 +79,11 @@ const cell = struct {
         self.cand = @enumToInt(cell_values.value_mask);
     }
 
-    fn getValue(self: *const cell) i16 {
+    fn getValue(self: *const cell) cell_values {
         return self.value;
     }
 
-    fn setValue(self: *cell, value: i16) void {
+    fn setValue(self: *cell, value: cell_values) void {
         self.value = value;
     }
 
@@ -134,21 +130,31 @@ pub const puzzle = struct {
     }
 
     fn setValue(self: *puzzle, row: usize, col: usize, value: i16) void {
-        self.cell[row][col].setValue(convertValueToBitMask(value));
+        if ((row < 9) and (col < 9)) {
+            self.cell[row][col].setValue(convertValueToBitMask(value));
 
-        if (value > 0) {
-            self.cell[row][col].setCandidate(@enumToInt(cell_values.no_value)); // Clears the candidate mask
-        } else if (value == 0) {
-            self.cell[row][col].setCandidate(@enumToInt(cell_values.value_mask)); // Resets the candidate mask
+            if (value > 0) {
+                self.cell[row][col].setCandidate(@enumToInt(cell_values.no_value)); // Clears the candidate mask
+            } else {
+                self.cell[row][col].setCandidate(@enumToInt(cell_values.value_mask)); // Resets the candidate mask
+            }
         }
     }
 
     fn getValue(self: *const puzzle, row: usize, col: usize) i16 {
-        return convertBitMaskToValue(self.cell[row][col].getValue());
+        if ((row < 9) and (col < 9)) {
+            return convertBitMaskToValue(@enumToInt(self.cell[row][col].getValue()));
+        } else {
+            return @enumToInt(cell_values.invalid);
+        }
     }
 
     fn getCandidate(self: *const puzzle, row: usize, col: usize) u16 {
-        return self.cell[row][col].getCandidate();
+        if ((row < 9) and (col < 9)) {
+            return self.cell[row][col].getCandidate();
+        } else {
+            return @enumToInt(cell_values.invalid);
+        }
     }
 
     fn removeCandidate(self: *puzzle, row: usize, col: usize, cand: u5) void {
@@ -192,7 +198,7 @@ pub const puzzle = struct {
 
         for (self.cell) |row| {
             for (row) |element| {
-                var value = @intCast(u8, convertBitMaskToValue(element.getValue()));
+                var value = @intCast(u8, convertBitMaskToValue(@enumToInt(element.getValue())));
 
                 if (value > 0) {
                     output_string[pos] = value + '0';
@@ -228,7 +234,7 @@ pub const puzzle = struct {
         for (self.cell) |row| {
             var col: usize = 0;
             for (row) |element| {
-                sequence[col] = element.getValue();
+                sequence[col] = @enumToInt(element.getValue());
                 col += 1;
             }
 
@@ -247,7 +253,7 @@ pub const puzzle = struct {
         while (col < 9) {
             var row: usize = 0;
             while (row < 9) {
-                sequence[row] = self.cell[row][col].getValue();
+                sequence[row] = @enumToInt(self.cell[row][col].getValue());
                 row += 1;
             }
 
@@ -271,7 +277,7 @@ pub const puzzle = struct {
             while (sub_row < 3) {
                 var sub_col: usize = 0;
                 while (sub_col < 3) {
-                    sequence[seq_idx] = self.cell[3 * (sub / 3) + sub_row][3 * (sub % 3) + sub_col].getValue();
+                    sequence[seq_idx] = @enumToInt(self.cell[3 * (sub / 3) + sub_row][3 * (sub % 3) + sub_col].getValue());
                     sub_col += 1;
                     seq_idx += 1;
                 }
@@ -292,7 +298,7 @@ pub const puzzle = struct {
 
         for (self.cell) |row| {
             for (row) |element| {
-                var value = validateBitMask(element.getValue());
+                var value = validateBitMask(@enumToInt(element.getValue()));
                 if (value == cand_state.no_candidates) {
                     count += 1;
                 } else if (value == cand_state.invalid) {
@@ -327,7 +333,7 @@ pub const puzzle = struct {
             var old_mask = self.row_cand[row];
 
             while (col < 9) {
-                mask |= self.cell[row][col].getValue();
+                mask |= @enumToInt(self.cell[row][col].getValue());
                 col += 1;
             }
 
@@ -352,7 +358,7 @@ pub const puzzle = struct {
             var old_mask = self.col_cand[col];
 
             while (row < 9) {
-                mask |= self.cell[row][col].getValue();
+                mask |= @enumToInt(self.cell[row][col].getValue());
                 row += 1;
             }
 
@@ -379,7 +385,7 @@ pub const puzzle = struct {
                 var sub_col: usize = 0;
 
                 while (sub_col < 3) {
-                    mask |= self.cell[3 * (sub / 3) + sub_row][3 * (sub % 3) + sub_col].getValue();
+                    mask |= @enumToInt(self.cell[3 * (sub / 3) + sub_row][3 * (sub % 3) + sub_col].getValue());
                     sub_col += 1;
                 }
 
@@ -426,8 +432,8 @@ pub const puzzle = struct {
         while (row < 9) {
             var col: usize = 0;
             while (col < 9) {
-                if (cand_state.one_candidate == validateBitMask(self.cell[row][col].getCandidate())) {
-                    self.cell[row][col].setValue(self.cell[row][col].getCandidate());
+                if ((self.cell[row][col].getValue() == cell_values.no_value) and (cand_state.one_candidate == validateBitMask(self.cell[row][col].getCandidate()))) {
+                    self.cell[row][col].setValue(@intToEnum(cell_values, self.cell[row][col].getCandidate()));
                     self.cell[row][col].setCandidate(@enumToInt(cell_values.no_value));
                     count += 1;
                 }
@@ -484,7 +490,7 @@ pub const puzzle = struct {
         return false; // No candidate found
     }
 
-    fn solve(self: *puzzle) puzzle_state {
+    fn solve(self: *puzzle) bool {
         var status = self.prunePuzzle();
 
         while (status == puzzle_state.not_solved) {
@@ -496,20 +502,20 @@ pub const puzzle = struct {
             if (self.selectCandidate(&row, &col, &val)) {
                 p.setValue(row, col, val);
 
-                status = p.solve();
-
-                if (status == puzzle_state.solved) {
+                if (p.solve()) {
                     self.* = p; // overwrite current puzzle
-                } else if (status == puzzle_state.invalid) {
+                    status = puzzle_state.solved;
+                } else {
                     self.removeCandidate(row, col, @intCast(u5, val));
                     status = self.prunePuzzle();
                 }
-            } else {
-                status = puzzle_state.invalid;
             }
         }
 
-        return status;
+        return switch (status) {
+            puzzle_state.solved => true,
+            else => false,
+        };
     }
 };
 
@@ -519,11 +525,11 @@ test "cell testing" {
 
     try std.testing.expectEqual(@intCast(i16, @enumToInt(cell_values.value_mask)), c.getCandidate());
 
-    try std.testing.expectEqual(@intCast(i16, 0), c.getValue());
+    try std.testing.expectEqual(cell_values.no_value, c.getValue());
 
-    c.setValue(1);
+    c.setValue(cell_values.value_1);
     c.setCandidate(1);
-    try std.testing.expectEqual(@intCast(i16, 1), c.getValue());
+    try std.testing.expectEqual(cell_values.value_1, c.getValue());
     try std.testing.expectEqual(@intCast(i16, 1), c.getCandidate());
 }
 
@@ -532,12 +538,12 @@ test "getter and setters" {
 
     p.setValue(1, 1, 1);
 
-    try std.testing.expectEqual(p.cell[1][1].value, 1);
+    try std.testing.expectEqual(p.cell[1][1].value, cell_values.value_1);
     try std.testing.expectEqual(p.getValue(1, 1), 1);
 
     p.setValue(1, 1, 2);
 
-    try std.testing.expectEqual(p.cell[1][1].value, 2);
+    try std.testing.expectEqual(p.cell[1][1].value, cell_values.value_2);
     try std.testing.expectEqual(p.getValue(1, 1), 2);
 }
 
@@ -625,17 +631,17 @@ test "convert mask to value" {
 }
 
 test "convert value to mask" {
-    try std.testing.expectEqual(@intCast(i16, @enumToInt(cell_values.value_1)), convertValueToBitMask(@intCast(i16, 1)));
-    try std.testing.expectEqual(@intCast(i16, @enumToInt(cell_values.value_2)), convertValueToBitMask(@intCast(i16, 2)));
-    try std.testing.expectEqual(@intCast(i16, @enumToInt(cell_values.value_3)), convertValueToBitMask(@intCast(i16, 3)));
-    try std.testing.expectEqual(@intCast(i16, @enumToInt(cell_values.value_4)), convertValueToBitMask(@intCast(i16, 4)));
-    try std.testing.expectEqual(@intCast(i16, @enumToInt(cell_values.value_5)), convertValueToBitMask(@intCast(i16, 5)));
-    try std.testing.expectEqual(@intCast(i16, @enumToInt(cell_values.value_6)), convertValueToBitMask(@intCast(i16, 6)));
-    try std.testing.expectEqual(@intCast(i16, @enumToInt(cell_values.value_7)), convertValueToBitMask(@intCast(i16, 7)));
-    try std.testing.expectEqual(@intCast(i16, @enumToInt(cell_values.value_8)), convertValueToBitMask(@intCast(i16, 8)));
-    try std.testing.expectEqual(@intCast(i16, @enumToInt(cell_values.value_9)), convertValueToBitMask(@intCast(i16, 9)));
-    try std.testing.expectEqual(@intCast(i16, @enumToInt(cell_values.no_value)), convertValueToBitMask(@intCast(i16, 0)));
-    try std.testing.expectEqual(@intCast(i16, @enumToInt(cell_values.invalid)), convertValueToBitMask(@intCast(i16, -1)));
+    try std.testing.expectEqual(cell_values.value_1, convertValueToBitMask(@intCast(i16, 1)));
+    try std.testing.expectEqual(cell_values.value_2, convertValueToBitMask(@intCast(i16, 2)));
+    try std.testing.expectEqual(cell_values.value_3, convertValueToBitMask(@intCast(i16, 3)));
+    try std.testing.expectEqual(cell_values.value_4, convertValueToBitMask(@intCast(i16, 4)));
+    try std.testing.expectEqual(cell_values.value_5, convertValueToBitMask(@intCast(i16, 5)));
+    try std.testing.expectEqual(cell_values.value_6, convertValueToBitMask(@intCast(i16, 6)));
+    try std.testing.expectEqual(cell_values.value_7, convertValueToBitMask(@intCast(i16, 7)));
+    try std.testing.expectEqual(cell_values.value_8, convertValueToBitMask(@intCast(i16, 8)));
+    try std.testing.expectEqual(cell_values.value_9, convertValueToBitMask(@intCast(i16, 9)));
+    try std.testing.expectEqual(cell_values.no_value, convertValueToBitMask(@intCast(i16, 0)));
+    try std.testing.expectEqual(cell_values.invalid, convertValueToBitMask(@intCast(i16, -1)));
 }
 
 test "Check for repeated values in row" {
@@ -849,7 +855,7 @@ test "solve valid sudoku" {
     for (invalid_test_puzzles) |test_string| {
         p.import(test_string);
 
-        try std.testing.expect(puzzle_state.invalid == p.solve());
+        try std.testing.expect(!p.solve());
     }
 }
 
@@ -859,6 +865,6 @@ test "solve invalid sudoku" {
     for (valid_test_puzzles) |test_string| {
         p.import(test_string);
 
-        try std.testing.expect(puzzle_state.solved == p.solve());
+        try std.testing.expect(p.solve());
     }
 }
