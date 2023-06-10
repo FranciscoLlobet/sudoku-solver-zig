@@ -1,7 +1,7 @@
 const std = @import("std");
 const sudoku_solver = @import("src/sudoku-solver.zig");
 
-test "Test top165 dataset" {
+test "Test top1465 dataset" {
     var allocator = std.heap.page_allocator;
     var file = try std.fs.cwd().openFile("./data/puzzles3_magictour_top1465", .{});
     defer file.close();
