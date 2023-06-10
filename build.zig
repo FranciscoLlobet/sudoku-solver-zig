@@ -9,6 +9,10 @@ pub fn build(b: *std.build.Builder) void {
     lib.setBuildMode(mode);
     lib.install();
 
+    const exe = b.addExecutable("main", "src/main.zig");
+    exe.setBuildMode(mode);
+    exe.install();
+
     const unit_tests = b.addTest("src/sudoku-solver.zig");
     unit_tests.setBuildMode(mode);
 
@@ -18,4 +22,13 @@ pub fn build(b: *std.build.Builder) void {
     const unit_test_step = b.step("test", "Run sudoku-solver library tests");
     unit_test_step.dependOn(&unit_tests.step);
     unit_test_step.dependOn(&data_tests.step);
+
+    const run_exe = exe.run();
+    run_exe.step.dependOn(b.getInstallStep());
+    //if (b.args) |args| {
+    //    run_exe.addArg(args);
+    //}
+
+    const run_step = b.step("run", "Run sudoku-solver");
+    run_step.dependOn(&run_exe.step);
 }
