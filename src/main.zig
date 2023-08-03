@@ -13,14 +13,14 @@ pub fn main() !void {
 
     std.debug.print("Start Data test\r\n", .{});
 
-    var p = sudoku_solver.puzzle.init();
+    var p = sudoku_solver.init();
     var count: usize = 0;
 
     while (try reader.readUntilDelimiterOrEof(line, '\n')) |line_data| {
         // Do something with the line
         if (line_data.len == 81) {
             p.import(line_data);
-            if (sudoku_solver.puzzle_state.solved == p.solve()) {
+            if (.solved == try p.solve()) {
                 count += 1;
             }
         }
