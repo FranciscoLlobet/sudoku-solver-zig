@@ -9,23 +9,24 @@ This library has been written as a `kata` to test the basic features of the [Zig
 
 > This project, the repository and author(s) are **not** affiliated with the [Zig Software Foundation](https://ziglang.org/zsf/).
 
-
 ## API usage
 
 > Work-in progress
 
 ```zig
+const puzzle = @import("sudoku-solver.zig);
+
+// ...
+const puzzle_as_string: []const u8 = "..2.3...8.....8....31.2.....6..5.27..1.....5.2.4.6..31....8.6.5.......13..531.4..";
+// ...
+
 var p = puzzle.init();
 
-p.import(puzzle_as_string);
-if(puzzle_state.solver == p.solve())
-{
-    // puzzle is solved
-    var exported_string : []u8 = p.export();
-}
-else
-{
-    // puzzle has no solution
+try p.import(puzzle_as_string);
+
+p.solve() catch |err|{
+  // Solver failed to find solution
+  _ = err;
 }
 ```
 
@@ -43,28 +44,40 @@ zig build
 
 ## Testing
 
+The testing strategy validates the solving algorithn using:
+
+- Invalid sudoku puzzles
+- Valid and solved sudoku puzzles
+- Naked singles
+- Hidden singles
+
+### Unit tests
+
+Run the unit-tests
+
 ```shell
 zig build test
 ```
 
-Tested algorithm using:
+### Data tests
 
-- Invalid sudokus
-- Valid and solved sudokus
-- Najed singles
-- Hidden singles
+Data-based tests will validate the sudoku solving algorithm.
 
+I consider the [`top4665`](http://magictour.free.fr/top1465) data set available at <http://magictour.free.fr/sudoku.htm> to be the most complete data set to test for valid sudoku which need advanced sudoku solving algorithms.
 
-Testing data sets:
+> The data sets are currently not included in the repository.
 
-> The data sets are currently not included in the repository. 
+To get the data set, download it from the link or use, for example `curl`. The data set shall be stored in the `data` directory.
 
-I consider the `top4665` data set to be the most complete data set to test for valid sudokus which need advanced sudoku solving algorithms.
+```shell
+curl http://magictour.free.fr/top1465 --output ./data/top1465
+```
 
-- <http://magictour.free.fr/sudoku.htm> 
-  - <http://magictour.free.fr/top1465>. 1465 hardest sudokus sorted by rating
+Run the data tests
 
-
+```shell
+zig build run
+```
 
 ## License
 

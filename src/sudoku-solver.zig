@@ -170,13 +170,13 @@ fn removeCandidate(self: *@This(), row: usize, col: usize, cand: u5) void {
 }
 
 /// Import a Sudoku puzzle as a string
-pub fn import(self: *@This(), input_string: []const u8) void {
+pub fn import(self: *@This(), input_string: []const u8) !void {
     var pos: usize = 0;
     var pos_string: usize = 0;
 
     while ((pos_string < input_string.len) and (pos < 81)) {
         const char_val = input_string[pos_string];
-        const sequence_len: u3 = std.unicode.utf8ByteSequenceLength(char_val) catch unreachable;
+        const sequence_len: u3 = try std.unicode.utf8ByteSequenceLength(char_val);
 
         const row: usize = pos / 9;
         const col: usize = pos % 9;
@@ -448,21 +448,14 @@ fn updateCells(self: *@This()) usize {
 }
 
 fn generateMasks(self: *@This()) usize {
-    var count: usize = 0;
-
-    count += self.generateColMasks();
-    count += self.generateRowMasks();
-    count += self.generateSubMasks();
-    count += self.generateCellMask();
-
-    return count;
+    return self.generateColMasks() + self.generateRowMasks() + self.generateSubMasks() + self.generateCellMask();
 }
 
 /// Prunes the puzzle.
 /// Returns false if the puzzle is solved
 /// Return true if the puzzle
 /// Returns error if the puzzle is invalid
-fn prunePuzzle(self: *@This()) !bool {
+fn prune(self: *@This()) !bool {
     var count: usize = 1;
 
     while (count != 0) {
@@ -495,7 +488,7 @@ fn selectCandidate(self: *@This(), row: *usize, col: *usize, val: *i16) !void {
 }
 
 pub fn solve(self: *@This()) !void {
-    var status = try self.prunePuzzle();
+    var status = try self.prune();
 
     while (status == true) {
         var row: usize = undefined;
@@ -511,7 +504,7 @@ pub fn solve(self: *@This()) !void {
 
         p.solve() catch {
             self.removeCandidate(row, col, @as(u5, @intCast(val)));
-            status = try self.prunePuzzle();
+            status = try self.prune();
         };
 
         if (status == false) {
@@ -570,7 +563,7 @@ test "string_import" {
     const test_string: []const u8 = "974236158638591742125487936316754289742918563589362417867125394253649871491873625";
 
     var p = puzzle.init();
-    p.import(test_string);
+    p.import(test_string) catch unreachable;
     try std.testing.expectEqual(p.getValue(0, 0), 9);
     try std.testing.expectEqual(p.getValue(0, 1), 7);
     try std.testing.expectEqual(p.getValue(8, 8), 5);
@@ -594,7 +587,7 @@ test "round trip inport/export string" {
     var p = puzzle.init();
 
     for (valid_test_puzzles) |test_string| {
-        p.import(test_string);
+        p.import(test_string) catch unreachable;
 
         try std.testing.expect(std.mem.eql(u8, test_string, p.exportAsString()));
         try std.testing.expectEqual(test_string.len, p.exportAsString().len);
@@ -738,7 +731,7 @@ test "check valid puzzles" {
     var p = puzzle.init();
 
     for (valid_test_puzzles) |test_string| {
-        p.import(test_string);
+        p.import(test_string) catch unreachable;
 
         _ = p.checkPuzzle() catch |err| {
             try std.testing.expect(solver_error.invalid_puzzle == err);
@@ -752,7 +745,7 @@ test "check invalid puzzles" {
     try std.testing.expectEqual(true, p.checkPuzzle() catch unreachable);
 
     for (invalid_test_puzzles) |test_string| {
-        p.import(test_string);
+        p.import(test_string) catch unreachable;
 
         _ = p.checkPuzzle() catch |err| {
             try std.testing.expect(solver_error.invalid_puzzle == err);
@@ -762,19 +755,19 @@ test "check invalid puzzles" {
 
 test "check for empty cells" {
     var p = puzzle.init();
-    p.import(valid_test_puzzles[0]);
+    p.import(valid_test_puzzles[0]) catch unreachable;
 
     try std.testing.expectEqual(false, p.checkEmptyVals() catch unreachable);
 
-    p.import(valid_test_puzzles[1]);
+    p.import(valid_test_puzzles[1]) catch unreachable;
 
     try std.testing.expectEqual(true, p.checkEmptyVals() catch unreachable);
 
-    p.import(valid_test_puzzles[2]);
+    p.import(valid_test_puzzles[2]) catch unreachable;
 
     try std.testing.expectEqual(true, p.checkEmptyVals() catch unreachable);
 
-    p.import(valid_test_puzzles[3]);
+    p.import(valid_test_puzzles[3]) catch unreachable;
 
     try std.testing.expectEqual(true, p.checkEmptyVals() catch unreachable);
 }
@@ -819,28 +812,28 @@ test "update cells" {
 
     p.setValue(0, 8, 9);
     try std.testing.expectEqual(true, p.checkPuzzle() catch unreachable);
-    try std.testing.expectEqual(true, p.prunePuzzle() catch unreachable);
+    try std.testing.expectEqual(true, p.prune() catch unreachable);
     try std.testing.expect(5 == p.getValue(0, 4));
 }
 
 test "Solve simple puzzles" {
     var p = puzzle.init();
 
-    p.import(valid_test_puzzles[0]);
+    p.import(valid_test_puzzles[0]) catch unreachable;
 
-    try std.testing.expectEqual(false, try p.prunePuzzle());
+    try std.testing.expectEqual(false, try p.prune());
 
     // pruning solves this simple puzzle
-    p.import(valid_test_puzzles[1]);
-    try std.testing.expectEqual(false, try p.prunePuzzle());
+    p.import(valid_test_puzzles[1]) catch unreachable;
+    try std.testing.expectEqual(false, try p.prune());
 
     // pruning solves this simple puzzle (naked singles)
-    p.import(valid_test_puzzles[2]);
-    try std.testing.expectEqual(false, try p.prunePuzzle());
+    p.import(valid_test_puzzles[2]) catch unreachable;
+    try std.testing.expectEqual(false, try p.prune());
 
     // pruning is not enough for this puzzle (hidden singles)
-    p.import(valid_test_puzzles[3]);
-    try std.testing.expectEqual(true, try p.prunePuzzle());
+    p.import(valid_test_puzzles[3]) catch unreachable;
+    try std.testing.expectEqual(true, try p.prune());
 }
 
 test "Select Candidates" {
@@ -854,17 +847,17 @@ test "Select Candidates" {
     try std.testing.expect((0 == row) and (0 == col) and (1 == val));
 
     p.setValue(0, 0, 1);
-    try std.testing.expect(true == try p.prunePuzzle());
+    try std.testing.expect(true == try p.prune());
     try p.selectCandidate(&row, &col, &val);
     try std.testing.expect((0 == row) and (1 == col) and (2 == val));
 
     p.setValue(0, 1, 2);
-    try std.testing.expect(true == try p.prunePuzzle());
+    try std.testing.expect(true == try p.prune());
     try p.selectCandidate(&row, &col, &val);
     try std.testing.expect((0 == row) and (2 == col) and (3 == val));
 
-    p.import(valid_test_puzzles[2]);
-    try std.testing.expect(true == try p.prunePuzzle());
+    p.import(valid_test_puzzles[2]) catch unreachable;
+    try std.testing.expect(true == try p.prune());
     p.selectCandidate(&row, &col, &val) catch |err| {
         try std.testing.expect(solver_error.no_candidates == err);
     };
@@ -874,7 +867,7 @@ test "solve invalid sudoku" {
     var p = puzzle.init();
 
     for (invalid_test_puzzles) |test_string| {
-        p.import(test_string);
+        p.import(test_string) catch unreachable;
 
         _ = p.solve() catch |err| {
             try std.testing.expect(err == solver_error.invalid_puzzle);
@@ -886,7 +879,7 @@ test "solve valid sudoku" {
     var p = puzzle.init();
 
     for (valid_test_puzzles) |test_string| {
-        p.import(test_string);
+        p.import(test_string) catch unreachable;
 
         try p.solve();
     }
