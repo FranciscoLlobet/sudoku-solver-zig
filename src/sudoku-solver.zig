@@ -490,22 +490,22 @@ fn selectCandidate(self: *@This(), row: *usize, col: *usize, val: *i16) bool {
     return false; // No candidate found
 }
 
-pub fn solve(self: *@This()) !bool {
+pub fn solve(self: *@This()) !void {
     var status = try self.prunePuzzle();
 
     while (status == true) {
         var row: usize = undefined;
         var col: usize = undefined;
         var val: i16 = undefined;
+        status = false;
 
         var p = self.*;
         if (self.selectCandidate(&row, &col, &val)) {
             p.setValue(row, col, val);
 
-            status = p.solve() catch ret: {
+            p.solve() catch {
                 self.removeCandidate(row, col, @as(u5, @intCast(val)));
                 status = try self.prunePuzzle();
-                break :ret status;
             };
 
             if (status == false) {
@@ -515,8 +515,6 @@ pub fn solve(self: *@This()) !bool {
             return solver_error.invalid_puzzle;
         }
     }
-
-    return status;
 }
 
 test "cell testing" {
@@ -739,7 +737,9 @@ test "check valid puzzles" {
     for (valid_test_puzzles) |test_string| {
         p.import(test_string);
 
-        //try std.testing.expect(puzzle_state.invalid != p.checkPuzzle());
+        _ = p.checkPuzzle() catch |err| {
+            try std.testing.expect(solver_error.invalid_puzzle == err);
+        };
     }
 }
 
@@ -883,8 +883,6 @@ test "solve valid sudoku" {
     for (valid_test_puzzles) |test_string| {
         p.import(test_string);
 
-        var result = try p.solve();
-
-        try std.testing.expect(false == result);
+        try p.solve();
     }
 }

@@ -18,9 +18,10 @@ test "Test top1465 dataset" {
         // Do something with the line
         if (line_data.len == 81) {
             p.import(line_data);
-            if (false == try p.solve()) {
-                count += 1;
-            }
+
+            p.solve() catch unreachable;
+
+            count += 1;
         }
     }
     try std.testing.expectEqual(count, 1465);
