@@ -9,6 +9,7 @@ const cand_state = enum(i16) {
 };
 
 pub const solver_error = error{
+    no_candidates,
     invalid_puzzle,
 };
 
@@ -457,18 +458,21 @@ fn generateMasks(self: *@This()) usize {
     return count;
 }
 
+/// Prunes the puzzle.
+/// Returns false if the puzzle is solved
+/// Return true if the puzzle
+/// Returns error if the puzzle is invalid
 fn prunePuzzle(self: *@This()) !bool {
     var count: usize = 1;
 
     while (count != 0) {
-        count = self.generateMasks();
-        count += self.updateCells();
+        count = self.generateMasks() + self.updateCells();
     }
 
     return self.checkPuzzle();
 }
 
-fn selectCandidate(self: *@This(), row: *usize, col: *usize, val: *i16) bool {
+fn selectCandidate(self: *@This(), row: *usize, col: *usize, val: *i16) !void {
     val.* = -1;
     var cand: usize = 2;
 
@@ -479,7 +483,7 @@ fn selectCandidate(self: *@This(), row: *usize, col: *usize, val: *i16) bool {
             while (col.* < 9) {
                 if (@popCount(self.cell[row.*][col.*].cand) == cand) {
                     val.* = @ctz(self.cell[row.*][col.*].cand) + 1;
-                    return true;
+                    return;
                 }
                 col.* += 1;
             }
@@ -487,7 +491,7 @@ fn selectCandidate(self: *@This(), row: *usize, col: *usize, val: *i16) bool {
         }
         cand += 1;
     }
-    return false; // No candidate found
+    return solver_error.no_candidates; // No candidate found
 }
 
 pub fn solve(self: *@This()) !void {
@@ -500,19 +504,18 @@ pub fn solve(self: *@This()) !void {
         status = false;
 
         var p = self.*;
-        if (self.selectCandidate(&row, &col, &val)) {
-            p.setValue(row, col, val);
 
-            p.solve() catch {
-                self.removeCandidate(row, col, @as(u5, @intCast(val)));
-                status = try self.prunePuzzle();
-            };
+        try self.selectCandidate(&row, &col, &val);
 
-            if (status == false) {
-                self.* = p; // overwrite current puzzle
-            }
-        } else {
-            return solver_error.invalid_puzzle;
+        p.setValue(row, col, val);
+
+        p.solve() catch {
+            self.removeCandidate(row, col, @as(u5, @intCast(val)));
+            status = try self.prunePuzzle();
+        };
+
+        if (status == false) {
+            self.* = p; // overwrite current puzzle
         }
     }
 }
@@ -847,22 +850,24 @@ test "Select Candidates" {
     var col: usize = 0;
     var val: i16 = 0;
     try std.testing.expect(9 == @popCount(p.cell[0][0].getCandidate()));
-    try std.testing.expect(true == p.selectCandidate(&row, &col, &val));
+    try p.selectCandidate(&row, &col, &val);
     try std.testing.expect((0 == row) and (0 == col) and (1 == val));
 
     p.setValue(0, 0, 1);
     try std.testing.expect(true == try p.prunePuzzle());
-    try std.testing.expect(true == p.selectCandidate(&row, &col, &val));
+    try p.selectCandidate(&row, &col, &val);
     try std.testing.expect((0 == row) and (1 == col) and (2 == val));
 
     p.setValue(0, 1, 2);
     try std.testing.expect(true == try p.prunePuzzle());
-    try std.testing.expect(true == p.selectCandidate(&row, &col, &val));
+    try p.selectCandidate(&row, &col, &val);
     try std.testing.expect((0 == row) and (2 == col) and (3 == val));
 
     p.import(valid_test_puzzles[2]);
     try std.testing.expect(true == try p.prunePuzzle());
-    try std.testing.expect(false == p.selectCandidate(&row, &col, &val));
+    p.selectCandidate(&row, &col, &val) catch |err| {
+        try std.testing.expect(solver_error.no_candidates == err);
+    };
 }
 
 test "solve invalid sudoku" {
