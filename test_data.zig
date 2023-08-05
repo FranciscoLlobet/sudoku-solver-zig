@@ -18,7 +18,7 @@ test "Test top1465 dataset" {
         // Do something with the line
         if (line_data.len == 81) {
             p.import(line_data);
-            if (sudoku_solver.puzzle_state.solved == try p.solve()) {
+            if (false == try p.solve()) {
                 count += 1;
             }
         }

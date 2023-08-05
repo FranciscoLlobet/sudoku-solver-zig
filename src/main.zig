@@ -20,7 +20,7 @@ pub fn main() !void {
         // Do something with the line
         if (line_data.len == 81) {
             p.import(line_data);
-            if (.solved == try p.solve()) {
+            if (false == try p.solve()) {
                 count += 1;
             }
         }
