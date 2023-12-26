@@ -1,30 +1,28 @@
 const std = @import("std");
-const sudoku_solver = @import("sudoku-solver.zig");
+const testing = std.testing;
+const puzzle = @import("puzzle.zig");
 
-pub fn main() !void {
-    var allocator = std.heap.page_allocator;
-    var file = try std.fs.cwd().openFile("./data/top1465", .{});
-    defer file.close();
+const data = @import("data.zig");
 
-    var reader = file.reader();
+test "basic add functionality" {
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    var allocator = gpa.allocator();
 
-    var line = try allocator.alloc(u8, 1024);
-    defer allocator.free(line);
+    for (data.puzzle_files) |puzzle_files| {
+        var file = try std.fs.cwd().openFile(puzzle_files, .{});
+        defer file.close();
 
-    std.debug.print("Start Data test\r\n", .{});
+        var reader = file.reader();
 
-    var p = sudoku_solver.init();
-    var count: usize = 0;
+        var line = try allocator.alloc(u8, 1024);
+        defer allocator.free(line);
 
-    while (try reader.readUntilDelimiterOrEof(line, '\n')) |line_data| {
-        // Do something with the line
-        if (line_data.len == 81) {
-            try p.import(line_data);
-
-            p.solve() catch unreachable;
-            count += 1;
+        while (try reader.readUntilDelimiterOrEof(line, '\n')) |line_data| {
+            if (line_data.len >= 81) {
+                var p = try puzzle.importFromString(line_data[0..81]);
+                try p.solve(allocator);
+                try testing.expect(try p.grid.checkPuzzle());
+            }
         }
     }
-
-    std.debug.print("Solved puzzles {} \r\n", .{count});
 }
