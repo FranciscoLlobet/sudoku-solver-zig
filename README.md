@@ -14,20 +14,22 @@ This library has been written as a `kata` to test the basic features of the [Zig
 > Work-in progress
 
 ```zig
-const puzzle = @import("sudoku-solver.zig);
+const puzzle = @import("puzzle.zig);
 
 // ...
 const puzzle_as_string: []const u8 = "..2.3...8.....8....31.2.....6..5.27..1.....5.2.4.6..31....8.6.5.......13..531.4..";
 // ...
 
-var p = puzzle.init();
+// Provide your memory allocator
+var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+var allocator = gpa.allocator();
 
-try p.import(puzzle_as_string);
+// import puzzle from string
+var p = try puzzle.importFromString(puzzle_as_string);
 
-p.solve() catch |err|{
-  // Solver failed to find solution
-  _ = err;
-}
+// Solve the puzzle.
+// Returns error if sudoku cannot be solved
+try p.solve(allocator);
 ```
 
 ## Limitation
@@ -63,11 +65,11 @@ zig build test
 
 Data-based tests will validate the sudoku solving algorithm.
 
-I consider the [`top4665`](http://magictour.free.fr/top1465) data set available at <http://magictour.free.fr/sudoku.htm> to be the most complete data set to test for valid sudoku which need advanced sudoku solving algorithms.
+I consider the [`top1465`](http://magictour.free.fr/top1465) data set available at <http://magictour.free.fr/sudoku.htm> to be the most complete data set to test for valid sudoku which need advanced sudoku solving algorithms.
 
 > The data sets are currently not included in the repository.
 
-To get the data set, download it from the link or use, for example `curl`. The data set shall be stored in the `data` directory.
+To get the data set, download it from the link or use, for example [`curl`](https://curl.se/docs/). The data set shall be stored in the `data` directory.
 
 ```shell
 curl http://magictour.free.fr/top1465 --output ./data/top1465
@@ -76,7 +78,7 @@ curl http://magictour.free.fr/top1465 --output ./data/top1465
 Run the data tests
 
 ```shell
-zig build run
+zig build test
 ```
 
 ## License
