@@ -1,4 +1,8 @@
 # sudoku-solver-zig
+[![zig-build](https://github.com/FranciscoLlobet/sudoku-solver-zig/actions/workflows/zig-build.yml/badge.svg)](https://github.com/FranciscoLlobet/sudoku-solver-zig/actions/workflows/zig-build.yml)
+![GitHub License](https://img.shields.io/github/license/franciscollobet/sudoku-solver-zig)
+![GitHub top language](https://img.shields.io/github/languages/top/franciscollobet/sudoku-solver-zig)
+
 
 ## Sudoku Solver in Zig
 

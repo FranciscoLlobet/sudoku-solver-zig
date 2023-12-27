@@ -34,9 +34,9 @@ jobs:
           python-version: '3.x'
           cache: 'pip'
       - name: Install deps
-        run: python -m pip install --upgrade pip setuptools wheel zig
+        run: python -m pip install --upgrade pip setuptools wheel -r requirements.txt
       # Runs a single command using the runners shell
       - name: Run Zig program
-        run: zig build run
+        run: python -m ziglang build
       - name: Run Zig Tests
-        run: zig build test
+        run: python -m ziglang build test
