@@ -116,8 +116,8 @@ pub fn getValueMask(self: *@This()) usize {
 
 /// Get the first and last candidates in a cell
 pub fn getFirstAndLastCandidates(self: @This()) !struct { a: cellValues, b: cellValues } {
-    var first = try cellValues.getValueFromInt(@clz(@as(usize, 0)) - @clz(self.value));
-    var last = try cellValues.getValueFromInt((@ctz(self.value) + 1));
+    const first = try cellValues.getValueFromInt(@clz(@as(usize, 0)) - @clz(self.value));
+    const last = try cellValues.getValueFromInt((@ctz(self.value) + 1));
 
     return .{ .a = first, .b = last };
 }

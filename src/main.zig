@@ -14,7 +14,7 @@ test "basic add functionality" {
 
         var reader = file.reader();
 
-        var line = try allocator.alloc(u8, 1024);
+        const line = try allocator.alloc(u8, 1024);
         defer allocator.free(line);
 
         while (try reader.readUntilDelimiterOrEof(line, '\n')) |line_data| {

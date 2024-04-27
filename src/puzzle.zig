@@ -152,8 +152,6 @@ test "test import invalid values" {
 }
 
 test "pruning" {
-    var buffer: [82]u8 = undefined;
-    _ = buffer;
     var puzzle = try @This().importFromString(data.valid_test_puzzles[0]);
     try puzzle.grid.generateMasks();
     try testing.expect(try puzzle.grid.checkPuzzle());
@@ -179,7 +177,7 @@ test "select candidate" {
     _ = try puzzle.grid.checkPuzzle();
 
     try testing.expectEqual(@as(usize, 27), try puzzle.grid.countSolvedCells());
-    var t = try puzzle.selectCandidate();
+    const t = try puzzle.selectCandidate();
 
     try puzzle.grid.setValue(t.row, t.col, t.value);
     try puzzle.grid.generateMasks();
