@@ -73,9 +73,9 @@ pub fn countCandidates(self: *@This(), selector: candidateType, row: ?usize, col
 pub fn removeCandidate(self: *@This(), selector: candidateType, row: ?usize, col: ?usize, cand: cellValues) void {
     return switch (selector) {
         .GRID_CELL => self.values[row.?][col.?].removeCandidate(cand),
-        .ROW_CELL => self.row_cand[row.?].removeCandidate(cand),
-        .COL_CELL => self.col_cand[col.?].removeCandidate(cand),
-        .SUB_GRID_CELL => self.sub_cand[row.?][col.?].removeCandidate(cand),
+        .ROW_CELL => unreachable, //.row_cand[row.?].removeCandidate(cand),
+        .COL_CELL => unreachable, //self.col_cand[col.?].removeCandidate(cand),
+        .SUB_GRID_CELL => unreachable, //self.sub_cand[row.?][col.?].removeCandidate(cand),
     };
 }
 
