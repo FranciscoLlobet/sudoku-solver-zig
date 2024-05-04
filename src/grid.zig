@@ -116,7 +116,7 @@ fn rowMask(self: *@This(), row: usize) !usize {
         }
     }
 
-    return @intFromBool((prevMask != self.row_cand[row].getValueMask()));
+    return @as(usize, @intFromBool((prevMask != self.row_cand[row].getValueMask())));
 }
 
 /// Generate col mask
@@ -133,7 +133,7 @@ fn colMask(self: *@This(), col: usize) !usize {
         }
     }
 
-    return @intFromBool((prevMask != self.col_cand[col].getValueMask()));
+    return @as(usize, @intFromBool((prevMask != self.col_cand[col].getValueMask())));
 }
 
 /// Generate subgrid mask
@@ -151,7 +151,7 @@ fn subMask(self: *@This(), subRow: usize, subCol: usize) !usize {
         }
     }
 
-    return @intFromBool((prevMask != self.sub_cand[subRow][subCol].getValueMask()));
+    return @as(usize, @intFromBool((prevMask != self.sub_cand[subRow][subCol].getValueMask())));
 }
 
 /// Generate subgrid masks for the whole grid
@@ -207,12 +207,7 @@ fn checkRow(self: *@This(), row: usize) !void {
 
     for (0..9) |i| {
         if (try self.values[row][i].getValue()) |val| {
-            if (checkMask.isCandidate(val)) {
-                return cell.cellError.invalid_value; // Actually repeated value
-            } else {
-                // Add candidate
-                checkMask.value |= @intFromEnum(val);
-            }
+            try checkMask.checkAndAddCandidate(val);
         }
     }
 }
@@ -223,12 +218,7 @@ fn checkCol(self: *@This(), col: usize) !void {
 
     for (0..9) |i| {
         if (try self.values[i][col].getValue()) |val| {
-            if (checkMask.isCandidate(val)) {
-                return cell.cellError.invalid_value; // Actually repeated value
-            } else {
-                // Add candidate
-                checkMask.value |= @intFromEnum(val);
-            }
+            try checkMask.checkAndAddCandidate(val);
         }
     }
 }
@@ -241,12 +231,7 @@ fn checkSub(self: *@This(), subRow: usize, subCol: usize) !void {
     for (0..3) |i| {
         for (0..3) |j| {
             if (try self.values[3 * subRow + i][3 * subCol + j].getValue()) |val| {
-                if (checkMask.isCandidate(val)) {
-                    return cell.cellError.invalid_value; // Actually repeated value
-                } else {
-                    // Add candidate
-                    checkMask.value |= @intFromEnum(val);
-                }
+                try checkMask.checkAndAddCandidate(val);
             }
         }
     }

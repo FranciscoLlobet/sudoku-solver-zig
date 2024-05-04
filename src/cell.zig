@@ -1,4 +1,5 @@
 // Cell API
+const std = @import("std");
 
 pub const cellError = error{
     invalid_value,
@@ -22,40 +23,35 @@ pub const cellValues = enum(usize) {
 
     // Is the current bitmask a valid value?
     pub fn isValue(val: usize) !?@This() {
-        if (val == VALUE_INVALID) {
-            return cellError.invalid_value;
-        } else if (@popCount(val) == 1) {
+        if (@popCount(val) == 1) {
             return @enumFromInt(val);
+        } else if (val == VALUE_INVALID) {
+            return cellError.invalid_value;
+        } else {
+            return null;
         }
-        return null;
+        unreachable;
     }
 
     // Converts the enum into an int
     pub fn intFromValue(val: ?@This()) u8 {
         if (val) |v| {
-            return switch (v) {
-                .VALUE_INITIAL => 0,
-                else => @ctz(@intFromEnum(v)) + 1,
-            };
+            if (v != .VALUE_INITIAL) {
+                return @ctz(@intFromEnum(v)) + 1;
+            }
         }
         return 0;
     }
 
     /// Converts an integer into a value
     pub fn getValueFromInt(val: u8) !@This() {
-        return switch (val) {
-            0 => .VALUE_INITIAL,
-            1 => .VALUE_1,
-            2 => .VALUE_2,
-            3 => .VALUE_3,
-            4 => .VALUE_4,
-            5 => .VALUE_5,
-            6 => .VALUE_6,
-            7 => .VALUE_7,
-            8 => .VALUE_8,
-            9 => .VALUE_9,
-            else => cellError.invalid_value,
-        };
+        if (val == 0) {
+            return .VALUE_INITIAL;
+        } else if ((val >= 1) and (val <= 9)) {
+            return @enumFromInt(std.math.shl(usize, 1, @as(u5, @intCast(val)) - 1));
+        } else {
+            return cellError.invalid_value;
+        }
     }
 };
 
@@ -74,10 +70,19 @@ pub fn isCandidate(self: *@This(), value: cellValues) bool {
 /// Removes a candidate from the bitmask
 pub fn removeCandidate(self: *@This(), value: cellValues) void {
     self.value = self.value & ~@intFromEnum(value);
-    //switch (value) {
-    //    .VALUE_INITIAL => {},
-    //    else => self.value = self.value & ~@intFromEnum(value),
-    //}
+}
+
+/// Add a candidate to the cell
+pub fn addCandidate(self: *@This(), value: cellValues) void {
+    self.value = self.value | @intFromEnum(value);
+}
+
+pub fn checkAndAddCandidate(self: *@This(), value: cellValues) cellError!void {
+    if (self.isCandidate(value)) {
+        return cellError.invalid_value;
+    } else {
+        self.addCandidate(value);
+    }
 }
 
 /// Set value of a cell to the given cell value
