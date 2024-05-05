@@ -39,7 +39,7 @@ pub fn init() @This() {
 }
 
 /// Get the value of a cell
-pub fn getValue(self: *@This(), row: usize, col: usize) !?cellValues {
+pub fn getValue(self: *const @This(), row: usize, col: usize) !?cellValues {
     return self.values[row][col].getValue();
 }
 
@@ -80,13 +80,14 @@ pub fn removeCandidate(self: *@This(), selector: candidateType, row: ?usize, col
 }
 
 /// Generate new value mask for the desired cell
-fn valueMask(self: *@This(), row: usize, col: usize) !usize {
+/// Returns true if the mask changed, false if it did not
+fn valueMask(self: *@This(), row: usize, col: usize) !bool {
     const prevMask = self.values[row][col].getValueMask();
 
     if (null == try self.values[row][col].getValue()) {
         self.values[row][col].value &= (self.row_cand[row].getValueMask() & self.col_cand[col].getValueMask() & self.sub_cand[row / 3][col / 3].getValueMask());
     }
-    return @intFromBool(prevMask != self.values[row][col].getValueMask());
+    return (prevMask != self.values[row][col].getValueMask());
 }
 
 /// Generate value masks for the whole grid
@@ -95,7 +96,7 @@ fn valueMaskInGrid(self: *@This()) !usize {
 
     for (0..9) |i| {
         for (0..9) |j| {
-            changeCount += try self.valueMask(i, j);
+            changeCount += if (try self.valueMask(i, j)) 1 else 0;
         }
     }
 
@@ -105,7 +106,7 @@ fn valueMaskInGrid(self: *@This()) !usize {
 /// Generate row mask
 ///
 /// Returns true if row mask changed
-fn rowMask(self: *@This(), row: usize) !usize {
+fn rowMask(self: *@This(), row: usize) !bool {
     const prevMask = self.row_cand[row].getValueMask(); // previous mask
 
     self.row_cand[row] = cell.init(); // Reset the row mask
@@ -116,13 +117,13 @@ fn rowMask(self: *@This(), row: usize) !usize {
         }
     }
 
-    return @as(usize, @intFromBool((prevMask != self.row_cand[row].getValueMask())));
+    return (prevMask != self.row_cand[row].getValueMask());
 }
 
 /// Generate col mask
 ///
 /// Returns true if col mask changed
-fn colMask(self: *@This(), col: usize) !usize {
+fn colMask(self: *@This(), col: usize) !bool {
     const prevMask = self.col_cand[col].getValueMask(); // previous mask
 
     self.col_cand[col] = cell.init(); // Reset the col mask
@@ -133,12 +134,12 @@ fn colMask(self: *@This(), col: usize) !usize {
         }
     }
 
-    return @as(usize, @intFromBool((prevMask != self.col_cand[col].getValueMask())));
+    return (prevMask != self.col_cand[col].getValueMask());
 }
 
 /// Generate subgrid mask
 /// Returns true if subgrid mask changed
-fn subMask(self: *@This(), subRow: usize, subCol: usize) !usize {
+fn subMask(self: *@This(), subRow: usize, subCol: usize) !bool {
     const prevMask = self.sub_cand[subRow][subCol].getValueMask();
 
     self.sub_cand[subRow][subCol] = cell.init();
@@ -151,7 +152,7 @@ fn subMask(self: *@This(), subRow: usize, subCol: usize) !usize {
         }
     }
 
-    return @as(usize, @intFromBool((prevMask != self.sub_cand[subRow][subCol].getValueMask())));
+    return (prevMask != self.sub_cand[subRow][subCol].getValueMask());
 }
 
 /// Generate subgrid masks for the whole grid
@@ -160,7 +161,7 @@ fn subMaskInGrid(self: *@This()) !usize {
 
     for (0..3) |i| {
         for (0..3) |j| {
-            changeCount += try self.subMask(i, j);
+            changeCount += if (try self.subMask(i, j)) 1 else 0;
         }
     }
     return changeCount;
@@ -171,7 +172,7 @@ fn rowMaskInGrid(self: *@This()) !usize {
     var changeCount: usize = 0;
 
     for (0..9) |i| {
-        changeCount += try self.rowMask(i);
+        changeCount += if (try self.rowMask(i)) 1 else 0;
     }
 
     return changeCount;
@@ -182,7 +183,7 @@ fn colMaskInGrid(self: *@This()) !usize {
     var changeCount: usize = 0;
 
     for (0..9) |i| {
-        changeCount += try self.colMask(i);
+        changeCount += if (try self.colMask(i)) 1 else 0;
     }
 
     return changeCount;
@@ -202,7 +203,7 @@ pub fn generateMasks(self: *@This()) !void {
 }
 
 /// Check if a value is a candidate in the corresponding mask
-fn checkRow(self: *@This(), row: usize) !void {
+fn checkRow(self: *const @This(), row: usize) !void {
     var checkMask = cell{ .value = 0 };
 
     for (0..9) |i| {
@@ -213,7 +214,7 @@ fn checkRow(self: *@This(), row: usize) !void {
 }
 
 /// Check if a value is a candidate in the corresponding mask
-fn checkCol(self: *@This(), col: usize) !void {
+fn checkCol(self: *const @This(), col: usize) !void {
     var checkMask = cell{ .value = 0 };
 
     for (0..9) |i| {
@@ -225,7 +226,7 @@ fn checkCol(self: *@This(), col: usize) !void {
 
 /// Check if a value is a candidate in the corresponding mask
 /// subRow and subCol are the coordinates of the subgrid
-fn checkSub(self: *@This(), subRow: usize, subCol: usize) !void {
+fn checkSub(self: *const @This(), subRow: usize, subCol: usize) !void {
     var checkMask = cell{ .value = 0 };
 
     for (0..3) |i| {
@@ -238,21 +239,21 @@ fn checkSub(self: *@This(), subRow: usize, subCol: usize) !void {
 }
 
 /// Check all rows in the grid
-fn checkRowsInGrid(self: *@This()) !void {
+fn checkRowsInGrid(self: *const @This()) !void {
     for (0..9) |i| {
         try self.checkRow(i);
     }
 }
 
 /// Check all columns in the grid
-fn checkColsInGrid(self: *@This()) !void {
+fn checkColsInGrid(self: *const @This()) !void {
     for (0..9) |i| {
         try self.checkCol(i);
     }
 }
 
 /// Check all subgrids in the grid
-fn checkSubInGrid(self: *@This()) !void {
+fn checkSubInGrid(self: *const @This()) !void {
     for (0..3) |i| {
         for (0..3) |j| {
             try self.checkSub(i, j);
@@ -261,7 +262,7 @@ fn checkSubInGrid(self: *@This()) !void {
 }
 
 /// Check if the puzzle is valid and solved
-pub fn checkPuzzle(self: *@This()) !bool {
+pub fn checkPuzzle(self: *const @This()) !bool {
     try self.checkRowsInGrid();
     try self.checkColsInGrid();
     try self.checkSubInGrid();
@@ -270,12 +271,12 @@ pub fn checkPuzzle(self: *@This()) !bool {
 }
 
 /// Count for solved cells in the grid
-pub fn countSolvedCells(self: *@This()) !usize {
+pub fn countSolvedCells(self: *const @This()) !usize {
     var valueCount: usize = 0;
 
     for (0..9) |i| {
         for (0..9) |j| {
-            if (try self.values[i][j].getValue()) |_| {
+            if (try self.values[i][j].getValue() != null) {
                 valueCount += 1;
             }
         }
@@ -285,12 +286,12 @@ pub fn countSolvedCells(self: *@This()) !usize {
 }
 
 /// Check if the puzzle is solved
-pub fn isSolved(self: *@This()) !bool {
+pub fn isSolved(self: *const @This()) !bool {
     return (81 == try self.countSolvedCells());
 }
 
 /// Get the first and last candidates in a cell
-pub fn getFirstAndLastCandidates(self: *@This(), row: usize, col: usize) !struct { a: cellValues, b: cellValues } {
+pub fn getFirstAndLastCandidates(self: *const @This(), row: usize, col: usize) !struct { a: cellValues, b: cellValues } {
     const ret = try self.values[row][col].getFirstAndLastCandidates();
     return .{ .a = ret.a, .b = ret.b };
 }
@@ -323,19 +324,19 @@ test "Count Candidates" {
 test "Test the row mask" {
     var grid = @This().init();
 
-    try testing.expect(0 == try grid.rowMask(0));
+    try testing.expect(false == try grid.rowMask(0));
 
     try testing.expect(null == try grid.getValue(0, 1));
 
     try grid.setValue(0, 1, .VALUE_1);
 
     try testing.expect(.VALUE_1 == try grid.getValue(0, 1));
-    try testing.expect(1 == try grid.rowMask(0));
+    try testing.expect(true == try grid.rowMask(0));
     try testing.expect(1 == grid.countCandidates(.GRID_CELL, 0, 1));
     try testing.expect(8 == grid.countCandidates(.ROW_CELL, 0, null));
 
     try grid.setValue(0, 2, .VALUE_2);
-    try testing.expect(1 == try grid.rowMask(0));
+    try testing.expect(true == try grid.rowMask(0));
     try testing.expect(7 == grid.countCandidates(.ROW_CELL, 0, null));
 }
 

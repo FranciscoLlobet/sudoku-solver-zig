@@ -13,6 +13,5 @@ pub const invalid_test_puzzles: []const []const u8 = &[_][]const u8{
 };
 
 pub const puzzle_files: []const []const u8 = &[_][]const u8{
-    //"./data/HardestDatabase110626.txt",
     "./data/top1465.txt",
 };

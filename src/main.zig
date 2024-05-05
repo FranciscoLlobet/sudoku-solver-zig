@@ -19,9 +19,12 @@ test "basic add functionality" {
 
         while (try reader.readUntilDelimiterOrEof(line, '\n')) |line_data| {
             if (line_data.len >= 81) {
-                var p = try puzzle.importFromString(line_data[0..81]);
+                const originalPuzzle = try puzzle.importFromString(line_data[0..81]);
+                var p = originalPuzzle;
+
                 try p.solve(allocator);
                 try testing.expect(try p.grid.checkPuzzle());
+                try testing.expect(try p.verifyPuzzles(&originalPuzzle));
             }
         }
     }
