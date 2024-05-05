@@ -1,13 +1,12 @@
 # sudoku-solver-zig
+
 [![zig-build](https://github.com/FranciscoLlobet/sudoku-solver-zig/actions/workflows/zig-build.yml/badge.svg)](https://github.com/FranciscoLlobet/sudoku-solver-zig/actions/workflows/zig-build.yml)
 ![GitHub License](https://img.shields.io/github/license/franciscollobet/sudoku-solver-zig)
 ![GitHub top language](https://img.shields.io/github/languages/top/franciscollobet/sudoku-solver-zig)
 
-
 ## Sudoku Solver in Zig
 
 Simple Sudoku Solver Library based on the algorithm in [FranciscoLlobet/sudoku-solver](https://github.com/FranciscoLlobet/sudoku-solver)
-
 
 This library has been written as a `kata` to test the basic features of the [Zig Programming Language](https://www.ziglang.org).
 
@@ -76,7 +75,7 @@ I consider the [`top1465`](http://magictour.free.fr/top1465) data set available 
 To get the data set, download it from the link or use, for example [`curl`](https://curl.se/docs/). The data set shall be stored in the `data` directory.
 
 ```shell
-curl http://magictour.free.fr/top1465 --output ./data/top1465
+curl http://magictour.free.fr/top1465 --output ./data/top1465.txt
 ```
 
 Run the data tests
