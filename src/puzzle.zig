@@ -71,13 +71,13 @@ fn selectCandidate(self: *@This()) !struct { value: cellValues, row: usize, col:
     return cellError.invalid_value;
 }
 
-/// Set value
+/// Set value to specified cell in grid
 fn setValue(self: *@This(), row: usize, col: usize, value: cellValues) !void {
     try self.grid.setValue(row, col, value);
 }
 
 /// Check if puzzle is valid and solved
-pub fn checkPuzzle(self: *@This()) !bool {
+pub fn checkPuzzle(self: *const @This()) !bool {
     return self.grid.checkPuzzle();
 }
 
@@ -99,17 +99,41 @@ pub fn solve(self: *@This(), allocator: std.mem.Allocator) !void {
         // Create copy of puzzle
         p.* = self.*;
 
+        // Select candidate to try
         const cand = try p.selectCandidate();
+
+        // Set candidate value
         try p.setValue(cand.row, cand.col, cand.value);
 
-        p.solve(allocator) catch {
+        // Attempt to solve puzzle using the candidate value
+        if (p.solve(allocator)) {
+            // If puzzle was solved, then backpropagate solution
+            self.* = p.*;
+        } else |_| {
             self.removeCandidate(cand.row, cand.col, cand.value);
-            continue;
-        };
-
-        // If puzzle was solved, then backpropagate solution
-        self.* = p.*;
+        }
     }
+}
+
+/// Verify that the solved puzzle is derived from the original puzzle presented
+///
+pub fn verifyPuzzles(dest: *const @This(), src: *const @This()) !bool {
+    var unmatchCount: usize = 0;
+
+    for (0..9) |row| {
+        for (0..9) |col| {
+            const srcVal = try src.grid.getValue(row, col);
+            const dstVal = try dest.grid.getValue(row, col);
+
+            if ((srcVal != null) and (dstVal != null)) {
+                if (srcVal.? != dstVal.?) {
+                    unmatchCount += 1;
+                }
+            }
+        }
+    }
+
+    return if (unmatchCount == 0) true else false;
 }
 
 const data = @import("data.zig");
@@ -152,8 +176,6 @@ test "test import invalid values" {
 }
 
 test "pruning" {
-    var buffer: [82]u8 = undefined;
-    _ = buffer;
     var puzzle = try @This().importFromString(data.valid_test_puzzles[0]);
     try puzzle.grid.generateMasks();
     try testing.expect(try puzzle.grid.checkPuzzle());
@@ -179,7 +201,7 @@ test "select candidate" {
     _ = try puzzle.grid.checkPuzzle();
 
     try testing.expectEqual(@as(usize, 27), try puzzle.grid.countSolvedCells());
-    var t = try puzzle.selectCandidate();
+    const t = try puzzle.selectCandidate();
 
     try puzzle.grid.setValue(t.row, t.col, t.value);
     try puzzle.grid.generateMasks();
@@ -195,4 +217,38 @@ test "solver" {
         try puzzle.solve(allocator);
         try testing.expect(try puzzle.grid.checkPuzzle());
     }
+}
+
+test "solver invalid" {
+    const allocator = std.heap.page_allocator;
+
+    for (data.invalid_test_puzzles) |val| {
+        var puzzle = try @This().importFromString(val);
+        puzzle.solve(allocator) catch |err| {
+            try testing.expect(err == grid.cellError.invalid_value);
+        };
+    }
+}
+
+// Verify that the solved puzzle is derived from the original puzzle presented
+test "verify puzzles" {
+    const allocator = std.heap.page_allocator;
+
+    for (data.valid_test_puzzles) |val| {
+        var puzzle = try @This().importFromString(val);
+        const original = try @This().importFromString(val);
+
+        try puzzle.solve(allocator);
+
+        try testing.expect(try puzzle.verifyPuzzles(&original));
+    }
+}
+
+test "verify puzzles invalid" {
+    const puzzleArray: [3]@This() = .{ try @This().importFromString(data.valid_test_puzzles[0]), try @This().importFromString(data.valid_test_puzzles[1]), try @This().importFromString(data.valid_test_puzzles[2]) };
+
+    try testing.expect(false == try puzzleArray[0].verifyPuzzles(&puzzleArray[1]));
+    try testing.expect(false == try puzzleArray[1].verifyPuzzles(&puzzleArray[0]));
+    try testing.expect(false == try puzzleArray[0].verifyPuzzles(&puzzleArray[2]));
+    try testing.expect(false == try puzzleArray[2].verifyPuzzles(&puzzleArray[0]));
 }

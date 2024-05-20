@@ -1,14 +1,17 @@
 // Cell API
+const std = @import("std");
 
 pub const cellError = error{
     invalid_value,
 };
 
+const cellBitmaskType = if (@bitSizeOf(usize) >= 64) u64 else u32;
+
 /// Invalid Value
-const VALUE_INVALID: usize = 0;
+const VALUE_INVALID: u32 = 0;
 
 /// Cell Values Mask
-pub const cellValues = enum(usize) {
+pub const cellValues = enum(u32) {
     VALUE_1 = (1 << 0),
     VALUE_2 = (1 << 1),
     VALUE_3 = (1 << 2),
@@ -21,63 +24,63 @@ pub const cellValues = enum(usize) {
     VALUE_INITIAL = (0x1FF),
 
     // Is the current bitmask a valid value?
-    pub fn isValue(val: usize) !?@This() {
-        if (val == VALUE_INVALID) {
-            return cellError.invalid_value;
-        } else if (@popCount(val) == 1) {
+    pub fn isValue(val: u32) !?@This() {
+        if (@popCount(val) == 1) {
             return @enumFromInt(val);
+        } else if (val == VALUE_INVALID) {
+            return cellError.invalid_value;
+        } else {
+            return null;
         }
-        return null;
+        unreachable;
     }
 
     // Converts the enum into an int
     pub fn intFromValue(val: ?@This()) u8 {
         if (val) |v| {
-            return switch (v) {
-                .VALUE_INITIAL => 0,
-                else => @ctz(@intFromEnum(v)) + 1,
-            };
+            if (v != .VALUE_INITIAL) {
+                return @ctz(@intFromEnum(v)) + 1;
+            }
         }
         return 0;
     }
 
     /// Converts an integer into a value
     pub fn getValueFromInt(val: u8) !@This() {
-        return switch (val) {
-            0 => .VALUE_INITIAL,
-            1 => .VALUE_1,
-            2 => .VALUE_2,
-            3 => .VALUE_3,
-            4 => .VALUE_4,
-            5 => .VALUE_5,
-            6 => .VALUE_6,
-            7 => .VALUE_7,
-            8 => .VALUE_8,
-            9 => .VALUE_9,
-            else => cellError.invalid_value,
-        };
+        if (val == 0) {
+            return .VALUE_INITIAL;
+        } else if ((val >= 1) and (val <= 9)) {
+            return @enumFromInt(std.math.shl(usize, 1, @as(u5, @intCast(val)) - 1));
+        } else {
+            return cellError.invalid_value;
+        }
     }
 };
 
-value: usize,
+value: u32,
 
 /// Check if the cellValue is a candidate in the cell
-pub fn isCandidate(self: *@This(), value: cellValues) bool {
-    if (value == .VALUE_INITIAL) {
-        return true;
-    } else {
-        return ((self.value & @intFromEnum(value)) == @intFromEnum(value));
-    }
-    unreachable;
+pub fn isCandidate(self: *const @This(), value: cellValues) bool {
+    return ((self.value & @intFromEnum(value)) == @intFromEnum(value));
 }
 
-/// Removes a candidate from the bitmask
+/// Removes a candidate from the cell bitmask
 pub fn removeCandidate(self: *@This(), value: cellValues) void {
     self.value = self.value & ~@intFromEnum(value);
-    //switch (value) {
-    //    .VALUE_INITIAL => {},
-    //    else => self.value = self.value & ~@intFromEnum(value),
-    //}
+}
+
+/// Add a candidate to the cell bitmask
+pub fn addCandidate(self: *@This(), value: cellValues) void {
+    self.value = self.value | @intFromEnum(value);
+}
+
+/// Check if the value is a candidate and add it to the cell
+pub fn checkAndAddCandidate(self: *@This(), value: cellValues) cellError!void {
+    if (self.isCandidate(value)) {
+        return cellError.invalid_value;
+    } else {
+        self.addCandidate(value);
+    }
 }
 
 /// Set value of a cell to the given cell value
@@ -90,7 +93,7 @@ pub fn setValue(self: *@This(), value: cellValues) void {
 /// - Returns `null` if the cell is not a value
 /// - Returns the value if the cell is a value
 /// - Returns an error if the cell is invalid
-pub fn getValue(self: *@This()) !?cellValues {
+pub fn getValue(self: *const @This()) !?cellValues {
     return cellValues.isValue(self.value);
 }
 
@@ -100,24 +103,24 @@ pub fn setValueFromInt(self: *@This(), val: u8) !void {
 }
 
 /// Get a cell value as integer
-pub fn getValueAsInt(self: *@This()) !u8 {
+pub fn getValueAsInt(self: *const @This()) !u8 {
     return cellValues.intFromValue(try cellValues.isValue(self.value));
 }
 
 /// Count the candidates in the cell mask
-pub fn countCandidates(self: *@This()) usize {
+pub fn countCandidates(self: *const @This()) usize {
     return @popCount(self.value);
 }
 
 /// Get the value mask of a cell
-pub fn getValueMask(self: *@This()) usize {
+pub fn getValueMask(self: *const @This()) u32 {
     return self.value;
 }
 
 /// Get the first and last candidates in a cell
-pub fn getFirstAndLastCandidates(self: @This()) !struct { a: cellValues, b: cellValues } {
-    var first = try cellValues.getValueFromInt(@clz(@as(usize, 0)) - @clz(self.value));
-    var last = try cellValues.getValueFromInt((@ctz(self.value) + 1));
+pub fn getFirstAndLastCandidates(self: *const @This()) !struct { a: cellValues, b: cellValues } {
+    const first = try cellValues.getValueFromInt(@clz(@as(u32, 0)) - @clz(self.value));
+    const last = try cellValues.getValueFromInt((@ctz(self.value) + 1));
 
     return .{ .a = first, .b = last };
 }
@@ -183,8 +186,6 @@ test "convert int into value" {
 test "Check Bitmap" {
     var cell = @This(){ .value = 0 };
 
-    try testing.expect(true == cell.isCandidate(.VALUE_INITIAL));
-
     cell.value = @intFromEnum(cellValues.VALUE_INITIAL);
     try testing.expect(true == cell.isCandidate(.VALUE_1));
     try testing.expect(true == cell.isCandidate(.VALUE_2));
@@ -195,7 +196,6 @@ test "Check Bitmap" {
     try testing.expect(true == cell.isCandidate(.VALUE_7));
     try testing.expect(true == cell.isCandidate(.VALUE_8));
     try testing.expect(true == cell.isCandidate(.VALUE_9));
-    try testing.expect(true == cell.isCandidate(.VALUE_INITIAL));
 
     // Remove candidate
     cell.value = cell.value & ~@intFromEnum(cellValues.VALUE_5);
