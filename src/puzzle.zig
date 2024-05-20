@@ -106,14 +106,12 @@ pub fn solve(self: *@This(), allocator: std.mem.Allocator) !void {
         try p.setValue(cand.row, cand.col, cand.value);
 
         // Attempt to solve puzzle using the candidate value
-        p.solve(allocator) catch {
-            // If candidate value is invalid, then remove candidate
+        if (p.solve(allocator)) {
+            // If puzzle was solved, then backpropagate solution
+            self.* = p.*;
+        } else |_| {
             self.removeCandidate(cand.row, cand.col, cand.value);
-            continue;
-        };
-
-        // If puzzle was solved, then backpropagate solution
-        self.* = p.*;
+        }
     }
 }
 

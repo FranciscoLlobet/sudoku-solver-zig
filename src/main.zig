@@ -8,8 +8,8 @@ test "basic add functionality" {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     var allocator = gpa.allocator();
 
-    for (data.puzzle_files) |puzzle_files| {
-        var file = try std.fs.cwd().openFile(puzzle_files, .{});
+    for (data.puzzle_files) |puzzle_file| {
+        var file = try std.fs.cwd().openFile(puzzle_file, .{ .mode = .read_only });
         defer file.close();
 
         var reader = file.reader();
@@ -23,7 +23,7 @@ test "basic add functionality" {
                 var p = originalPuzzle;
 
                 try p.solve(allocator);
-                try testing.expect(try p.grid.checkPuzzle());
+                try testing.expect(try p.checkPuzzle());
                 try testing.expect(try p.verifyPuzzles(&originalPuzzle));
             }
         }
