@@ -37,7 +37,7 @@ jobs:
         run: python -m pip install --upgrade pip setuptools wheel -r requirements.txt
       # Runs a single command using the runners shell
       - name: Run Zig format check
-        run: python -m ziglang fmt --check --ast-check
+        run: python -m ziglang fmt --check --ast-check .
       - name: Run Zig program
         run: python -m ziglang build
       - name: Run Zig Tests
