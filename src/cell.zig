@@ -61,12 +61,7 @@ value: u32,
 
 /// Check if the cellValue is a candidate in the cell
 pub fn isCandidate(self: *const @This(), value: cellValues) bool {
-    if (value == .VALUE_INITIAL) {
-        return true;
-    } else {
-        return ((self.value & @intFromEnum(value)) == @intFromEnum(value));
-    }
-    unreachable;
+    return ((self.value & @intFromEnum(value)) == @intFromEnum(value));
 }
 
 /// Removes a candidate from the cell bitmask
@@ -191,8 +186,6 @@ test "convert int into value" {
 test "Check Bitmap" {
     var cell = @This(){ .value = 0 };
 
-    try testing.expect(true == cell.isCandidate(.VALUE_INITIAL));
-
     cell.value = @intFromEnum(cellValues.VALUE_INITIAL);
     try testing.expect(true == cell.isCandidate(.VALUE_1));
     try testing.expect(true == cell.isCandidate(.VALUE_2));
@@ -203,7 +196,6 @@ test "Check Bitmap" {
     try testing.expect(true == cell.isCandidate(.VALUE_7));
     try testing.expect(true == cell.isCandidate(.VALUE_8));
     try testing.expect(true == cell.isCandidate(.VALUE_9));
-    try testing.expect(true == cell.isCandidate(.VALUE_INITIAL));
 
     // Remove candidate
     cell.value = cell.value & ~@intFromEnum(cellValues.VALUE_5);
